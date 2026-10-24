@@ -1,0 +1,172 @@
+@let current = outcome();
+
+<h1>Dispense</h1>
+
+<div aria-live="polite">
+  @if (current !== null && current.kind === 'created') {
+    @let result = current.result;
+    @let dispense = result.dispense;
+    <div class="alert alert-success">
+      <h2 class="alert-title">{{ result.replayed ? 'Already recorded' : 'Dispense recorded' }}</h2>
+      @if (result.replayed) {
+        <p>
+          The server had already recorded this dispense (the same request was sent before). Nothing
+          new was created.
+        </p>
+      }
+      <dl class="facts">
+        <div>
+          <dt>Dispense</dt>
+          <dd>#{{ dispense.id }}</dd>
+        </div>
+        <div>
+          <dt>Medicine</dt>
+          <dd>{{ dispense.medicine_name }} ({{ dispense.medicine_code }})</dd>
+        </div>
+        <div>
+          <dt>Patient</dt>
+          <dd>{{ dispense.patient_ref }}</dd>
+        </div>
+        <div>
+          <dt>Quantity</dt>
+          <dd>{{ dispense.quantity }}</dd>
+        </div>
+        <div>
+          <dt>Dispensed</dt>
+          <dd>{{ formatInstant(dispense.dispensed_at) }}</dd>
+        </div>
+        <div>
+          <dt>Rule</dt>
+          <dd>#{{ dispense.rule_id }}</dd>
+        </div>
+      </dl>
+      <p>
+        <a routerLink="/ledger" [queryParams]="{ patient_ref: dispense.patient_ref }"
+          >View the ledger for {{ dispense.patient_ref }}</a
+        >
+      </p>
+    </div>
+  }
+</div>
+
+@if (current !== null && current.kind === 'failed') {
+  @let error = current.error;
+  <div class="alert alert-error" role="alert">
+    <h2 class="alert-title">{{ error.title }}</h2>
+    <p>{{ error.detail }}</p>
+    @if (error.violations.length > 0) {
+      <app-violation-list [violations]="error.violations" />
+    }
+    @if (error.retryable) {
+      <p>
+        You can submit again. The request is safe to repeat: if it was recorded the first time, the
+        server says so instead of recording it twice.
+      </p>
+    }
+    @if (error.requestId; as requestId) {
+      <p class="muted">
+        Reference: <code>{{ requestId }}</code>
+      </p>
+    }
+  </div>
+}
+
+<form class="stack" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="submitting()">
+  <div class="field">
+    <label for="field-medicine_code">Medicine code</label>
+    <input
+      id="field-medicine_code"
+      formControlName="medicine_code"
+      list="medicine-suggestions"
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      aria-required="true"
+      aria-describedby="field-medicine_code-hint field-medicine_code-errors"
+      [attr.aria-invalid]="ariaInvalid(form.controls.medicine_code)"
+    />
+    <datalist id="medicine-suggestions">
+      @for (medicine of suggestions(); track medicine.code) {
+        <option [value]="medicine.code">
+          {{ medicine.name }} · {{ medicine.strength_value }} {{ medicine.strength_unit }}
+          {{ medicine.form }}{{ medicine.is_active ? '' : ' · inactive' }}
+        </option>
+      }
+    </datalist>
+    <p id="field-medicine_code-hint" class="field-hint">
+      Start typing a code or a name to see suggestions.
+    </p>
+    <app-field-errors listId="field-medicine_code-errors" [control]="form.controls.medicine_code" />
+  </div>
+
+  <div class="field">
+    <label for="field-patient_ref">Patient reference</label>
+    <input
+      id="field-patient_ref"
+      formControlName="patient_ref"
+      autocomplete="off"
+      spellcheck="false"
+      aria-required="true"
+      aria-describedby="field-patient_ref-hint field-patient_ref-errors"
+      [attr.aria-invalid]="ariaInvalid(form.controls.patient_ref)"
+    />
+    <p id="field-patient_ref-hint" class="field-hint">An opaque reference such as PT-7K2M9Q.</p>
+    <app-field-errors listId="field-patient_ref-errors" [control]="form.controls.patient_ref" />
+  </div>
+
+  <div class="field">
+    <label for="field-quantity">Quantity</label>
+    <input
+      id="field-quantity"
+      type="number"
+      inputmode="numeric"
+      step="1"
+      formControlName="quantity"
+      autocomplete="off"
+      aria-required="true"
+      aria-describedby="field-quantity-hint field-quantity-errors"
+      [attr.aria-invalid]="ariaInvalid(form.controls.quantity)"
+    />
+    <p id="field-quantity-hint" class="field-hint">Whole units.</p>
+    <app-field-errors listId="field-quantity-errors" [control]="form.controls.quantity" />
+  </div>
+
+  <div class="field">
+    <label for="field-dispensed_at">Dispensed at (SAST)</label>
+    <input
+      id="field-dispensed_at"
+      type="datetime-local"
+      formControlName="dispensed_at"
+      aria-describedby="field-dispensed_at-hint field-dispensed_at-errors"
+      [attr.aria-invalid]="ariaInvalid(form.controls.dispensed_at)"
+    />
+    <p id="field-dispensed_at-hint" class="field-hint">
+      Optional. Read as South African time (SAST, Africa/Johannesburg), whatever this browser's time
+      zone is. Leave empty to use the current time.
+    </p>
+    <app-field-errors listId="field-dispensed_at-errors" [control]="form.controls.dispensed_at" />
+  </div>
+
+  <div class="field">
+    <label for="field-authorisation_ref">Authorisation reference</label>
+    <input
+      id="field-authorisation_ref"
+      formControlName="authorisation_ref"
+      autocomplete="off"
+      spellcheck="false"
+      aria-describedby="field-authorisation_ref-hint field-authorisation_ref-errors"
+      [attr.aria-invalid]="ariaInvalid(form.controls.authorisation_ref)"
+    />
+    <p id="field-authorisation_ref-hint" class="field-hint">
+      Needed only when the medicine's rule requires authorisation.
+    </p>
+    <app-field-errors
+      listId="field-authorisation_ref-errors"
+      [control]="form.controls.authorisation_ref"
+    />
+  </div>
+
+  <button type="submit" [disabled]="submitting()">
+    {{ submitting() ? 'Recording…' : 'Record dispense' }}
+  </button>
+</form>

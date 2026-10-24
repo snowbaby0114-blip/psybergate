@@ -1,0 +1,93 @@
+@let code = view().request;
+@let state = view().state;
+
+<p><a routerLink="/medicines">← All medicines</a></p>
+
+<div aria-live="polite">
+  @let shown = notice();
+  @if (shown !== null && shown.code === code) {
+    @let rule = shown.result.rule;
+    <div class="alert alert-success">
+      <h2 class="alert-title">Rule {{ rule.id }} introduced</h2>
+      <p>
+        It applies from {{ rule.effective_from }},
+        @if (rule.effective_to; as end) {
+          until {{ lastDay(end) }}.
+        } @else {
+          open-ended.
+        }
+        @if (shown.result.superseded; as earlier) {
+          @if (earlier.effective_to; as end) {
+            Rule {{ earlier.id }} now ends on {{ lastDay(end) }}.
+          }
+        } @else {
+          No earlier rule was in force on that date.
+        }
+      </p>
+    </div>
+  }
+</div>
+
+@switch (state.status) {
+  @case ('loading') {
+    <p class="status" role="status" aria-live="polite">Loading {{ code }}…</p>
+  }
+  @case ('error') {
+    @if (state.error.status === 404) {
+      <h1>Medicine not found</h1>
+      <p role="alert">There is no medicine with code "{{ code }}".</p>
+      <p><a class="button" routerLink="/medicines">Back to the medicines</a></p>
+    } @else {
+      <app-error-panel [error]="state.error" (retry)="reload()" />
+    }
+  }
+  @case ('ready') {
+    @let medicine = state.data.medicine;
+    <h1>
+      {{ medicine.name }} <span class="muted">{{ medicine.code }}</span>
+    </h1>
+    <dl class="facts">
+      <div>
+        <dt>Form</dt>
+        <dd>{{ medicine.form }}</dd>
+      </div>
+      <div>
+        <dt>Strength</dt>
+        <dd>{{ medicine.strength_value }} {{ medicine.strength_unit }}</dd>
+      </div>
+      <div>
+        <dt>Status</dt>
+        <dd>
+          @if (medicine.is_active) {
+            Active
+          } @else {
+            <span class="badge badge-inactive">Inactive</span>
+          }
+        </dd>
+      </div>
+    </dl>
+
+    <p>
+      @if (medicine.current_rule; as rule) {
+        Today ({{ medicine.as_of }}, SAST): at most {{ rule.max_quantity_per_dispense }} per
+        dispense and {{ rule.max_quantity_per_30_days }} per 30 days;
+        {{ rule.requires_authorisation ? 'authorisation required.' : 'no authorisation required.' }}
+      } @else {
+        No rule is in force today ({{ medicine.as_of }}, SAST).
+      }
+    </p>
+
+    @if (medicine.is_active) {
+      <p>
+        <a class="button" routerLink="/dispense" [queryParams]="{ medicine_code: medicine.code }"
+          >Dispense this medicine</a
+        >
+      </p>
+    }
+
+    <h2>Rule history</h2>
+    <app-rule-timeline [rules]="state.data.rules" />
+
+    <app-new-rule-form [code]="medicine.code" (introduced)="introduced(medicine.code, $event)" />
+  }
+}

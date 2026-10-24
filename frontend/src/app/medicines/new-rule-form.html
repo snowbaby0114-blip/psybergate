@@ -1,0 +1,92 @@
+<details>
+  <summary>Introduce a new rule</summary>
+
+  @let error = failure();
+  @if (error !== null) {
+    <div class="alert alert-error" role="alert">
+      <h3 class="alert-title">{{ error.title }}</h3>
+      <p>{{ error.detail }}</p>
+      @if (error.violations.length > 0) {
+        <app-violation-list [violations]="error.violations" />
+      }
+      @if (error.requestId; as requestId) {
+        <p class="muted">
+          Reference: <code>{{ requestId }}</code>
+        </p>
+      }
+    </div>
+  }
+
+  <form class="stack" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="submitting()">
+    <div class="field">
+      <label for="rule-effective_from">Applies from</label>
+      <input
+        id="rule-effective_from"
+        type="date"
+        formControlName="effective_from"
+        aria-required="true"
+        aria-describedby="rule-effective_from-hint rule-effective_from-errors"
+        [attr.aria-invalid]="ariaInvalid(form.controls.effective_from)"
+      />
+      <p id="rule-effective_from-hint" class="field-hint">
+        A business date (SAST). The rule in force on that date ends the day before; rules that start
+        later are not touched.
+      </p>
+      <app-field-errors
+        listId="rule-effective_from-errors"
+        [control]="form.controls.effective_from"
+      />
+    </div>
+
+    <div class="field">
+      <label for="rule-max_quantity_per_dispense">Maximum per dispense</label>
+      <input
+        id="rule-max_quantity_per_dispense"
+        type="number"
+        inputmode="numeric"
+        step="1"
+        formControlName="max_quantity_per_dispense"
+        aria-required="true"
+        aria-describedby="rule-max_quantity_per_dispense-errors"
+        [attr.aria-invalid]="ariaInvalid(form.controls.max_quantity_per_dispense)"
+      />
+      <app-field-errors
+        listId="rule-max_quantity_per_dispense-errors"
+        [control]="form.controls.max_quantity_per_dispense"
+      />
+    </div>
+
+    <div class="field">
+      <label for="rule-max_quantity_per_30_days">Maximum per 30 days</label>
+      <input
+        id="rule-max_quantity_per_30_days"
+        type="number"
+        inputmode="numeric"
+        step="1"
+        formControlName="max_quantity_per_30_days"
+        aria-required="true"
+        aria-describedby="rule-max_quantity_per_30_days-errors"
+        [attr.aria-invalid]="ariaInvalid(form.controls.max_quantity_per_30_days)"
+      />
+      <app-field-errors
+        listId="rule-max_quantity_per_30_days-errors"
+        [control]="form.controls.max_quantity_per_30_days"
+      />
+    </div>
+
+    <div class="field">
+      <label class="checkbox">
+        <input
+          id="rule-requires_authorisation"
+          type="checkbox"
+          formControlName="requires_authorisation"
+        />
+        Requires an authorisation reference
+      </label>
+    </div>
+
+    <button type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Saving…' : 'Introduce rule' }}
+    </button>
+  </form>
+</details>

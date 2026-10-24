@@ -1,0 +1,93 @@
+@let current = view();
+@let request = current.request;
+@let state = current.state;
+
+<h1>Medicines</h1>
+
+<form class="toolbar" role="search" (submit)="onSubmit($event)">
+  <label for="medicine-search">Search by name or code</label>
+  <div class="toolbar-row">
+    <input
+      id="medicine-search"
+      type="search"
+      autocomplete="off"
+      [formControl]="term"
+      (blur)="applyTerm(false)"
+    />
+    <button type="submit">Search</button>
+  </div>
+</form>
+
+<p class="status" role="status" aria-live="polite">
+  @switch (state.status) {
+    @case ('loading') {
+      Loading medicines…
+    }
+    @case ('ready') {
+      @if (state.data.items.length > 0) {
+        {{ state.data.items.length }}
+        {{ state.data.items.length === 1 ? 'medicine' : 'medicines' }} on this page
+      } @else if (request.q) {
+        No medicines match "{{ request.q }}".
+      } @else {
+        There are no medicines to show.
+      }
+    }
+  }
+</p>
+
+@if (state.status === 'error') {
+  <app-error-panel [error]="state.error" (retry)="retry()">
+    @if (request.stack.hasPrevious) {
+      <a class="button" routerLink="." [queryParams]="firstPage" queryParamsHandling="merge"
+        >Back to first page</a
+      >
+    }
+  </app-error-panel>
+}
+
+@if (state.status === 'ready' && state.data.items.length > 0) {
+  <div class="table-scroll" role="region" aria-label="Medicines" tabindex="0">
+    <table>
+      <caption class="visually-hidden">
+        Medicines
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Code</th>
+          <th scope="col">Name</th>
+          <th scope="col">Form</th>
+          <th scope="col">Strength</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (medicine of state.data.items; track medicine.code) {
+          <tr>
+            <td>
+              <a [routerLink]="['/medicines', medicine.code]">{{ medicine.code }}</a>
+            </td>
+            <td>{{ medicine.name }}</td>
+            <td>{{ medicine.form }}</td>
+            <td>{{ medicine.strength_value }} {{ medicine.strength_unit }}</td>
+            <td>
+              @if (medicine.is_active) {
+                Active
+              } @else {
+                <span class="badge badge-inactive">Inactive</span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+<app-pager
+  [pageNumber]="request.stack.pageNumber"
+  [hasPrevious]="request.stack.hasPrevious"
+  [hasNext]="state.status === 'ready' && state.data.next_cursor !== null"
+  (previous)="previous()"
+  (next)="next()"
+/>

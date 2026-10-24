@@ -1,0 +1,37 @@
+@if (ordered().length === 0) {
+  <p class="muted">No rules have been defined for this medicine.</p>
+} @else {
+  <ol class="timeline" aria-label="Rule history, oldest first">
+    @for (rule of ordered(); track rule.id) {
+      <li class="timeline-item timeline-item-{{ rule.status }}">
+        <p class="timeline-head">
+          <span class="badge badge-{{ rule.status }}">{{ statusLabel[rule.status] }}</span>
+          <span>
+            From <time [attr.datetime]="rule.effective_from">{{ rule.effective_from }}</time>
+            ·
+            @if (rule.effective_to; as end) {
+              until <time [attr.datetime]="lastDay(end)">{{ lastDay(end) }}</time>
+            } @else {
+              open-ended
+            }
+          </span>
+        </p>
+        <dl class="facts">
+          <div>
+            <dt>Max per dispense</dt>
+            <dd>{{ rule.max_quantity_per_dispense }}</dd>
+          </div>
+          <div>
+            <dt>Max per 30 days</dt>
+            <dd>{{ rule.max_quantity_per_30_days }}</dd>
+          </div>
+          <div>
+            <dt>Authorisation</dt>
+            <dd>{{ rule.requires_authorisation ? 'Required' : 'Not required' }}</dd>
+          </div>
+        </dl>
+        <p class="muted">Rule {{ rule.id }} · recorded {{ formatInstant(rule.created_at) }}</p>
+      </li>
+    }
+  </ol>
+}

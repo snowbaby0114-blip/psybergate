@@ -1,0 +1,9 @@
+# Normalise to LF in the repository and in working trees, on every platform.
+# Shell scripts copied into Linux containers break on CRLF.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

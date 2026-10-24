@@ -1,0 +1,13 @@
+<header class="app-header">
+  <a class="brand" routerLink="/medicines">EMGuidance Formulary</a>
+  <nav aria-label="Main">
+    <a routerLink="/medicines" routerLinkActive="active" ariaCurrentWhenActive="page">Medicines</a>
+    <a routerLink="/dispense" routerLinkActive="active" ariaCurrentWhenActive="page">Dispense</a>
+    <a routerLink="/ledger" routerLinkActive="active" ariaCurrentWhenActive="page"
+      >Patient ledger</a
+    >
+  </nav>
+</header>
+<main>
+  <router-outlet />
+</main>

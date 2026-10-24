@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: emguidance
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # -h makes pg_isready use TCP, like the api. Over the default unix socket it can already
+      # succeed while the image's first-run initialisation is still using a temporary server
+      # that does not listen on TCP and is about to restart.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d emguidance"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/emguidance
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      # The slim image has no curl. A non-2xx answer raises, which makes the command fail.
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      # Migrations run before the server starts listening; failures in this window do not count.
+      start_period: 30s
+    restart: unless-stopped
+
+  web:
+    build: ./frontend
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -1,0 +1,14 @@
+# The virtual environment alone is about 100 MB of build context, and it is Windows-built.
+.venv
+
+# Caches and bytecode of whatever ran on the host. tests/ is deliberately NOT ignored: the
+# tests run inside the image.
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.hypothesis
+**/.ruff_cache
+
+# Local environment files can hold credentials.
+.env
+.env.*

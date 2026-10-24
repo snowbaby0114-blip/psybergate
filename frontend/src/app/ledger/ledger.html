@@ -1,0 +1,113 @@
+@let current = view();
+@let request = current.request;
+@let state = current.state;
+
+<h1>Patient ledger</h1>
+
+<form class="toolbar" role="search" [formGroup]="form" (ngSubmit)="submit()">
+  <div class="field-row">
+    <div class="field">
+      <label for="ledger-patient">Patient reference</label>
+      <input
+        id="ledger-patient"
+        formControlName="patient_ref"
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </div>
+    <div class="field">
+      <label for="ledger-medicine">Medicine code (optional)</label>
+      <input
+        id="ledger-medicine"
+        formControlName="medicine"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+      />
+    </div>
+    <button type="submit">Show ledger</button>
+  </div>
+</form>
+
+<p class="status" role="status" aria-live="polite">
+  @switch (state.status) {
+    @case ('idle') {
+      Enter a patient reference to see their dispenses.
+    }
+    @case ('loading') {
+      Loading dispenses…
+    }
+    @case ('ready') {
+      @if (state.data.items.length > 0) {
+        {{ state.data.items.length }}
+        {{ state.data.items.length === 1 ? 'dispense' : 'dispenses' }} on this page, newest first
+      } @else if (request.medicine) {
+        No dispenses recorded for "{{ request.patientRef }}" and medicine "{{ request.medicine }}".
+      } @else {
+        No dispenses recorded for "{{ request.patientRef }}".
+      }
+    }
+  }
+</p>
+
+@if (state.status === 'error') {
+  <app-error-panel [error]="state.error" (retry)="retry()">
+    @if (request.stack.hasPrevious) {
+      <a class="button" routerLink="." [queryParams]="firstPage" queryParamsHandling="merge"
+        >Back to first page</a
+      >
+    }
+  </app-error-panel>
+}
+
+@if (state.status === 'ready' && state.data.items.length > 0) {
+  <div class="table-scroll" role="region" aria-label="Dispenses" tabindex="0">
+    <table>
+      <caption class="visually-hidden">
+        Dispenses for
+        {{
+          request.patientRef
+        }}, newest first
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Dispensed</th>
+          <th scope="col">Medicine</th>
+          <th scope="col">Quantity</th>
+          <th scope="col">Authorisation</th>
+          <th scope="col">Rule</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (dispense of state.data.items; track dispense.id) {
+          <tr>
+            <td>
+              <time [attr.datetime]="dispense.dispensed_at">{{
+                formatInstant(dispense.dispensed_at)
+              }}</time>
+            </td>
+            <td>
+              <a [routerLink]="['/medicines', dispense.medicine_code]">{{
+                dispense.medicine_code
+              }}</a>
+              {{ dispense.medicine_name }}
+            </td>
+            <td>{{ dispense.quantity }}</td>
+            <td>{{ dispense.authorisation_ref ?? '—' }}</td>
+            <td>{{ dispense.rule_id }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (state.status !== 'idle') {
+  <app-pager
+    [pageNumber]="request.stack.pageNumber"
+    [hasPrevious]="request.stack.hasPrevious"
+    [hasNext]="state.status === 'ready' && state.data.next_cursor !== null"
+    (previous)="previous()"
+    (next)="next()"
+  />
+}
